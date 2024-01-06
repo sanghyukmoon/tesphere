@@ -41,7 +41,7 @@ class TES:
         xi = r / r_0,
         u = ln(P_eff/P_ext),
     where
-        r_0 = c_s^2 / (4 pi G P_ext)^(1/2)
+        r_0 = c_s^2 / G^(1/2) / P_ext^(1/2)
     is the scale radius and P_ext is the total (thermal + turbulent)
     pressure at the edge.
 
@@ -93,11 +93,11 @@ class TES:
         # Do root finding in logarithmic space to find rmax
         # The order is important!!! this must come after setting `rs` and `uc`
         def _calc_u(logr):
-            r = np.exp(logr)
+            r = 10**logr
             u, _ = self.solve(r)
             return u
-        logrmax = brentq(_calc_u, np.log(self._rfloor), np.log10(self._rceil))
-        self.rmax = np.exp(logrmax)
+        logrmax = brentq(_calc_u, np.log10(self._rfloor), np.log10(self._rceil))
+        self.rmax = 10**logrmax
 
     def set_sonic_radius_floor(self, atol=1e-3):
         """Find minimum rs that does not cause ValueError on ODE solve"""
@@ -158,7 +158,7 @@ class TES:
         """
         _, du = self.solve(r)
         f = self.f(r)
-        return -f*r**2*du/np.sqrt(4*np.pi)
+        return -f*r**2*du
 
     def find_ucrit(self):
         """Find the critical uc
@@ -205,7 +205,7 @@ class TES:
             # Coefficients of the 2nd order ODE.
             a = f
             b = (2*self.p + 1)*f - 2*self.p
-            c = np.exp(u + 2*s)/f
+            c = 4*np.pi*np.exp(u + 2*s)/f
             ddu = -(b/a)*du - (c/a)
             return np.array([du, ddu])
 
