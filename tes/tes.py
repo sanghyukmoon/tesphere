@@ -106,7 +106,7 @@ class TES:
         while (b - a > atol):
             c = (a + b)/2
             try:
-                ts = TES('crit', rs=10**c)
+                ts = TES('crit', p=self.p, rs=10**c)
             except ValueError:
                 a = c
             else:
@@ -180,7 +180,7 @@ class TES:
         def _func(uc):
             ts = TES(uc, p=self.p, rs=self.rs)
             return -ts.menc(ts.rmax)
-        res = minimize_scalar(_func, bracket=(2.64, 2.65))
+        res = minimize_scalar(_func, bracket=(0, 2.65))
         ucrit = res.x
         return ucrit
 
