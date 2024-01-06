@@ -1,10 +1,8 @@
-from scipy.integrate import odeint, simpson, quad
-from scipy.optimize import minimize_scalar, brentq, newton
+from scipy.integrate import odeint
+from scipy.optimize import minimize_scalar, brentq
 import matplotlib.pyplot as plt
 import numpy as np
-import pickle
 import logging
-from pyathena.core_formation import tools
 
 
 class TES:
@@ -62,9 +60,15 @@ class TES:
     def __init__(self, uc, p=0.5, rs=np.inf):
         self._rfloor = 1e-6
         self._rceil = 1e20
-        self.uc = uc
         self.p = p
         self.rs = rs
+
+        if uc == 'crit':
+            self.uc = self.find_ucrit()
+        elif isinstance(uc, (float, int)):
+            self.uc = uc
+        else:
+            raise ValueError("uc must be either float or 'crit'")
 
         # Do root finding in logarithmic space to find rmax
         def _calc_u(logr):
@@ -105,6 +109,30 @@ class TES:
         _, du = self.solve(r)
         f = self.f(r)
         return -f*r**2*du/np.sqrt(4*np.pi)
+
+    def find_ucrit(self):
+        """Find the critical uc
+
+        Returns
+        -------
+        ucrit : float
+            The critical value of uc.
+
+        Notes
+        -----
+        The root is not necessarily be bracketed by `bracket`.
+        The `bracket` argument is used as initial points
+        for a downhill bracket search (see `scipy.optimize.bracket`)
+        Here, bracket is set to enclose the root for BE sphere.
+        For more turbulent TES, the end of the bracket will be
+        extended by the downhill bracket search.
+        """
+        def _func(uc):
+            ts = TES(uc, p=self.p, rs=self.rs)
+            return -ts.menc(ts.rmax)
+        res = minimize_scalar(_func, bracket=(2.64, 2.65))
+        ucrit = res.x
+        return ucrit
 
     def solve(self, rin):
         """Solve equilibrium equation.
