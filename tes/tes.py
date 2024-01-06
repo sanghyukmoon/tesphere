@@ -57,20 +57,23 @@ class TES:
     >>> # plot density profile
     >>> plt.loglog(r, np.exp(u))
     """
-    def __init__(self, uc, p=0.5, rs=np.inf, sigma=None):
+    def __init__(self, uc, p=0.5, rs=np.inf, sigma=0):
         self._rfloor = 1e-6
         self._rceil = 1e20
         self._rs_max = 1e3
         self.p = p
 
+        if np.isfinite(rs) and sigma > 0:
+            raise ValueError("Provide either rs or sigma, but not both.")
+
         # Set sonic radius based on either rs or sigma
-        if sigma is not None:
+        if sigma > 0:
             # Do root finding in log space
             def _func(logrs):
-                ts = TES(uc, p=p, rs=10**logrs, sigma=None)
+                ts = TES(uc, p=p, rs=10**logrs)
                 return ts.sigma() - sigma
             if _func(np.log10(self._rs_max)) > 0:
-                raise ValueError("The given value of `sigma` is too small")
+                raise ValueError("The given value of `sigma` is too small.")
             self.set_sonic_radius_floor()
             logrs = brentq(_func, np.log10(self._rs_floor), np.log10(self._rs_max))
             self.rs = 10**(logrs)
@@ -85,7 +88,7 @@ class TES:
         elif isinstance(uc, (float, int)):
             self.uc = uc
         else:
-            raise ValueError("uc must be either float or 'crit'")
+            raise ValueError("uc must be either float or 'crit'.")
 
         # Do root finding in logarithmic space to find rmax
         # The order is important!!! this must come after setting `rs` and `uc`
@@ -175,7 +178,7 @@ class TES:
         extended by the downhill bracket search.
         """
         def _func(uc):
-            ts = TES(uc, p=self.p, rs=self.rs, sigma=None)
+            ts = TES(uc, p=self.p, rs=self.rs)
             return -ts.menc(ts.rmax)
         res = minimize_scalar(_func, bracket=(2.64, 2.65))
         ucrit = res.x
