@@ -75,11 +75,36 @@ class TES:
         self.rmax = np.exp(logrmax)
 
     def rho(self, r):
+        """Calculate normalized density.
+
+        Notes
+        -----
+        rho = (P_ext / c_s^2) * (e^u / f)
+        """
         u, _ = self.solve(r)
         return np.exp(u) / self.f(r)
 
     def f(self, r):
+        """Ratio of total to thermal pressure.
+
+        Notes
+        -----
+        This dimensionless function is defined as
+            f = 1 + (r / r_s)^(2*p)
+        such that Peff = f*Pthm.
+        """
         return 1 + (r / self.rs)**(2*self.p)
+
+    def menc(self, r):
+        """Dimensionless enclosed mass
+
+        Notes
+        -----
+        Menc = c_s^4 * G^(-3/2) * P_ext^(-1/2) * menc
+        """
+        _, du = self.solve(r)
+        f = self.f(r)
+        return -f*r**2*du/np.sqrt(4*np.pi)
 
     def solve(self, rin):
         """Solve equilibrium equation.
