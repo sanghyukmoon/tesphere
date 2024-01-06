@@ -1,4 +1,4 @@
-from scipy.integrate import odeint
+from scipy.integrate import odeint, quad
 from scipy.optimize import minimize_scalar, brentq
 import matplotlib.pyplot as plt
 import numpy as np
@@ -57,13 +57,30 @@ class TES:
     >>> # plot density profile
     >>> plt.loglog(r, np.exp(u))
     """
-    def __init__(self, uc, p=0.5, rs=np.inf):
+    def __init__(self, uc, p=0.5, rs=np.inf, sigma=None):
         self._rfloor = 1e-6
         self._rceil = 1e20
+        self._rs_max = 1e3
         self.p = p
-        self.rs = rs
 
+        # Set sonic radius based on either rs or sigma
+        if sigma is not None:
+            # Do root finding in log space
+            def _func(logrs):
+                ts = TES(uc, p=p, rs=10**logrs, sigma=None)
+                return ts.sigma() - sigma
+            if _func(np.log10(self._rs_max)) > 0:
+                raise ValueError("The given value of `sigma` is too small")
+            self.set_sonic_radius_floor()
+            logrs = brentq(_func, np.log10(self._rs_floor), np.log10(self._rs_max))
+            self.rs = 10**(logrs)
+        else:
+            self.rs = rs
+
+        # Set pressure contrast based on uc
+        # The order is important!!! this must come after setting `rs`
         if uc == 'crit':
+            # This raises ValueError when rs is too small
             self.uc = self.find_ucrit()
         elif isinstance(uc, (float, int)):
             self.uc = uc
@@ -71,12 +88,27 @@ class TES:
             raise ValueError("uc must be either float or 'crit'")
 
         # Do root finding in logarithmic space to find rmax
+        # The order is important!!! this must come after setting `rs` and `uc`
         def _calc_u(logr):
             r = np.exp(logr)
             u, _ = self.solve(r)
             return u
         logrmax = brentq(_calc_u, np.log(self._rfloor), np.log10(self._rceil))
         self.rmax = np.exp(logrmax)
+
+    def set_sonic_radius_floor(self, atol=1e-3):
+        """Find minimum rs that does not cause ValueError on ODE solve"""
+        a = -5
+        b = 5
+        while (b - a > atol):
+            c = (a + b)/2
+            try:
+                ts = TES('crit', rs=10**c)
+            except ValueError:
+                a = c
+            else:
+                b = c
+        self._rs_floor = 10**b
 
     def rho(self, r):
         """Calculate normalized density.
@@ -88,6 +120,19 @@ class TES:
         u, _ = self.solve(r)
         return np.exp(u) / self.f(r)
 
+    def density_contrast(self):
+        """Calculate center-to-edge density contrast"""
+        return np.exp(self.uc) * self.f(self.rmax)
+
+    def sigma(self):
+        def _func(r):
+            return self.rho(r)*(self.f(r) - 1)*r**2
+        num, _ = quad(_func, 0, self.rmax)
+        def _func(r):
+            return self.rho(r)*r**2
+        den, _ = quad(_func, 0, self.rmax)
+        return np.sqrt(num/den)
+
     def f(self, r):
         """Ratio of total to thermal pressure.
 
@@ -96,6 +141,8 @@ class TES:
         This dimensionless function is defined as
             f = 1 + (r / r_s)^(2*p)
         such that Peff = f*Pthm.
+        It is useful to note that
+            sigma^2 / c_s^2 = f - 1
         """
         return 1 + (r / self.rs)**(2*self.p)
 
@@ -128,7 +175,7 @@ class TES:
         extended by the downhill bracket search.
         """
         def _func(uc):
-            ts = TES(uc, p=self.p, rs=self.rs)
+            ts = TES(uc, p=self.p, rs=self.rs, sigma=None)
             return -ts.menc(ts.rmax)
         res = minimize_scalar(_func, bracket=(2.64, 2.65))
         ucrit = res.x
