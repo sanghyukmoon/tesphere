@@ -1,3 +1,3 @@
 # TES - Turbulent Equilibrium Sphere
 
-* Documentation: https://sanghyukmoon.github.io/tes
+* Documentation: https://sanghyukmoon.github.io/turbulent_equilibrium_sphere
