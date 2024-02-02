@@ -123,17 +123,36 @@ class TES:
         u, _ = self.solve(r)
         return np.exp(u) / self.f(r)
 
+    def vr(self, r):
+        """Calculate turbulent velocity.
+
+        Notes
+        -----
+        vr = c_s * (r / r_s)^p
+        """
+        return (r / self.rs)**self.p
+
     def density_contrast(self):
         """Calculate center-to-edge density contrast"""
         return np.exp(self.uc) * self.f(self.rmax)
 
-    def sigma(self):
+    def sigma(self, rmax=None):
+        """Calculate mass-weighted mean velocity dispersion.
+
+        Parameters
+        ----------
+        rmax : float, optional
+            Outer radius within which the velocity dispersion is computed.
+            If not given, use the outer radius.
+        """
+        if rmax is None:
+            rmax = self.rmax
         def _func(r):
             return self.rho(r)*(self.f(r) - 1)*r**2
-        num, _ = quad(_func, 0, self.rmax)
+        num, _ = quad(_func, 0, rmax)
         def _func(r):
             return self.rho(r)*r**2
-        den, _ = quad(_func, 0, self.rmax)
+        den, _ = quad(_func, 0, rmax)
         return np.sqrt(num/den)
 
     def f(self, r):
