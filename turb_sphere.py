@@ -1,4 +1,4 @@
-from scipy.integrate import odeint, quad
+from scipy.integrate import solve_ivp, quad
 from scipy.optimize import minimize_scalar, brentq
 import matplotlib.pyplot as plt
 import numpy as np
@@ -217,7 +217,7 @@ class TES:
         du : float array
             Derivative of u: du/dr
         """
-        def _dydx(y, s):
+        def _dydx(s, y):
             """ODE in logr space"""
             u, du = y
             f = self.f(np.exp(s))
@@ -247,8 +247,8 @@ class TES:
             s = np.log(r)
 
             # Solve ODE
-            y = odeint(_dydx, y0, s)
-            u[mask] = y[1:, 0]
-            du[mask] = y[1:, 1]/r[1:]
-
+            res = solve_ivp(_dydx, (s[0], s[-1]), y0, t_eval=s, method='RK45')
+            y = res.y
+            u[mask] = y[0, 1:]
+            du[mask] = y[1, 1:]/r[1:]
         return u.squeeze()[()], du.squeeze()[()]
