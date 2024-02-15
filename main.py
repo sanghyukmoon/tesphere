@@ -4,14 +4,14 @@ import numpy as np
 import pickle
 
 pindex = [0.3, 0.5, 0.7]
-sigma_min, sigma_max = 0.1, 20
+sigma_min, sigma_max = 0.05, 20
 
 for p in pindex:
-    velocity_dispersions = np.logspace(np.log10(sigma_min), np.log10(sigma_max), 100)
+    velocity_dispersions = np.logspace(np.log10(sigma_min), np.log10(sigma_max), 4096)
     velocity_dispersions = np.insert(velocity_dispersions, 0, 0)
     rhoc, rhoe, radius, rsonic, mass, f, robs, mobs  = [], [], [], [], [], [], [], []
     for sigma in velocity_dispersions:
-        ts = tes.TES('crit', sigma=sigma, p=p)
+        ts = tes.TES('crit', sigma=sigma, p=p, from_table=False)
         rcrit = ts.rmax
         mcrit = ts.menc(rcrit)
         rhoc.append(ts.rho(0))

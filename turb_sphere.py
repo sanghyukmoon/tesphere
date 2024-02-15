@@ -1,8 +1,11 @@
 from scipy.integrate import solve_ivp, quad
 from scipy.optimize import minimize_scalar, brentq
+from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 import numpy as np
 import logging
+import pickle
+from pathlib import Path
 
 
 class TES:
@@ -57,10 +60,11 @@ class TES:
     >>> # plot density profile
     >>> plt.loglog(r, np.exp(u))
     """
-    def __init__(self, uc, p=0.5, rs=np.inf, sigma=0):
+    def __init__(self, uc, p=0.5, rs=np.inf, sigma=0, from_table=True):
         self._rfloor = 1e-6
         self._rceil = 1e20
-        self._rs_max = 1e3
+        self._rs_max = 1e4
+        self._sigma = None
         self.p = p
 
         if np.isfinite(rs) and sigma > 0:
@@ -68,15 +72,20 @@ class TES:
 
         # Set sonic radius based on either rs or sigma
         if sigma > 0:
-            # Do root finding in log space
-            def _func(logrs):
-                ts = TES(uc, p=p, rs=10**logrs)
-                return ts.sigma() - sigma
-            if _func(np.log10(self._rs_max)) > 0:
-                raise ValueError("The given value of `sigma` is too small.")
-            self.set_sonic_radius_floor()
-            logrs = brentq(_func, np.log10(self._rs_floor), np.log10(self._rs_max))
-            self.rs = 10**(logrs)
+            if from_table:
+                fp = Path(__file__).parent / f"data/p{p}.p"
+                ds = pickle.load(open(fp, "rb"))
+                self.rs = interp1d(ds['sigma'], ds['rsonic'])(sigma)[()]
+            else:
+                # Do root finding in log space
+                def _func(logrs):
+                    ts = TES(uc, p=p, rs=10**logrs)
+                    return ts.sigma - sigma
+                if _func(np.log10(self._rs_max)) > 0:
+                    raise ValueError("The given value of `sigma` is too small.")
+                self.set_sonic_radius_floor()
+                logrs = brentq(_func, np.log10(self._rs_floor), np.log10(self._rs_max))
+                self.rs = 10**(logrs)
         else:
             self.rs = rs
 
@@ -98,6 +107,15 @@ class TES:
             return u
         logrmax = brentq(_calc_u, np.log10(self._rfloor), np.log10(self._rceil))
         self.rmax = 10**logrmax
+
+        # Sanity check
+        if sigma > 0:
+            if not np.isclose(self.sigma, sigma, atol=1e-1):
+                raise ValueError(f"The computed velocity dispersion {self.sigma:.2f} is different"
+                                 f" from the input velocity dispersion {sigma:.2f}."
+                                 " The interpolation table may be either currupted"
+                                 " or has too low resolution.")
+
 
     def set_sonic_radius_floor(self, atol=1e-3):
         """Find minimum rs that does not cause ValueError on ODE solve"""
@@ -136,7 +154,14 @@ class TES:
         """Calculate center-to-edge density contrast"""
         return np.exp(self.uc) * self.f(self.rmax)
 
-    def sigma(self, rmax=None):
+    @property
+    def sigma(self):
+        """Compute or return the velocity dispersion"""
+        if self._sigma is None:
+            self._sigma = self.compute_sigma()
+        return self._sigma
+
+    def compute_sigma(self, rmax=None):
         """Calculate mass-weighted mean velocity dispersion.
 
         Parameters
@@ -149,10 +174,10 @@ class TES:
             rmax = self.rmax
         def _func(r):
             return self.rho(r)*(self.f(r) - 1)*r**2
-        num, _ = quad(_func, 0, rmax)
+        num, _ = quad(_func, 0, rmax, epsabs=1e-6)
         def _func(r):
             return self.rho(r)*r**2
-        den, _ = quad(_func, 0, rmax)
+        den, _ = quad(_func, 0, rmax, epsabs=1e-6)
         return np.sqrt(num/den)
 
     def f(self, r):
