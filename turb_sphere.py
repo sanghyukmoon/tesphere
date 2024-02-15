@@ -247,7 +247,11 @@ class TES:
             s = np.log(r)
 
             # Solve ODE
-            res = solve_ivp(_dydx, (s[0], s[-1]), y0, t_eval=s, method='RK45')
+            res = solve_ivp(_dydx, (s[0], s[-1]), y0, t_eval=s, method='LSODA')
+            # TODO(SMOON) resolve this
+            if not res.success:
+                print(res)
+                raise ValueError("Cannot solve the ODE")
             y = res.y
             u[mask] = y[0, 1:]
             du[mask] = y[1, 1:]/r[1:]

@@ -1,4 +1,4 @@
-import tes
+import turb_sphere as tes
 from pyathena.core_formation import tools
 import numpy as np
 import pickle
@@ -8,6 +8,7 @@ sigma_min, sigma_max = 0.1, 20
 
 for p in pindex:
     velocity_dispersions = np.logspace(np.log10(sigma_min), np.log10(sigma_max), 100)
+    velocity_dispersions = np.insert(velocity_dispersions, 0, 0)
     rhoc, rhoe, radius, rsonic, mass, f, robs, mobs  = [], [], [], [], [], [], [], []
     for sigma in velocity_dispersions:
         ts = tes.TES('crit', sigma=sigma, p=p)
