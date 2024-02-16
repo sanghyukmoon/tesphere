@@ -174,10 +174,10 @@ class TES:
             rmax = self.rmax
         def _func(r):
             return self.rho(r)*(self.f(r) - 1)*r**2
-        num, _ = quad(_func, 0, rmax, epsabs=1e-6)
+        num, _ = quad(_func, 0, rmax, epsabs=1e-3)
         def _func(r):
             return self.rho(r)*r**2
-        den, _ = quad(_func, 0, rmax, epsabs=1e-6)
+        den, _ = quad(_func, 0, rmax, epsabs=1e-3)
         return np.sqrt(num/den)
 
     def f(self, r):
