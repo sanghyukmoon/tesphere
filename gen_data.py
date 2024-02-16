@@ -1,13 +1,14 @@
-import turb_sphere as tes
+from turb_sphere import tes
 from pyathena.core_formation import tools
 import numpy as np
 import pickle
+from pathlib import Path
 
 pindex = [0.3, 0.5, 0.7]
 sigma_min, sigma_max = 0.05, 20
 
 for p in pindex:
-    velocity_dispersions = np.logspace(np.log10(sigma_min), np.log10(sigma_max), 4096)
+    velocity_dispersions = np.logspace(np.log10(sigma_min), np.log10(sigma_max), 100)
     velocity_dispersions = np.insert(velocity_dispersions, 0, 0)
     rhoc, rhoe, radius, rsonic, mass, f, robs, mobs  = [], [], [], [], [], [], [], []
     for sigma in velocity_dispersions:
@@ -41,6 +42,6 @@ for p in pindex:
                robs=robs,
                mobs=mobs,
                sigma=velocity_dispersions)
-    fname = f"data/p{p}.p"
-    with open(fname, "wb") as handle:
+    fp = Path(__file__).parent / f"data/p{p}.p"
+    with open(fp, "wb") as handle:
         pickle.dump(res, handle)

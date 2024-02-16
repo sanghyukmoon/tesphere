@@ -73,7 +73,7 @@ class TES:
         # Set sonic radius based on either rs or sigma
         if sigma > 0:
             if from_table:
-                fp = Path(__file__).parent / f"data/p{p}.p"
+                fp = Path(__file__).parent.parent / f"data/p{p}.p"
                 ds = pickle.load(open(fp, "rb"))
                 self.rs = interp1d(ds['sigma'], ds['rsonic'])(sigma)[()]
             else:
