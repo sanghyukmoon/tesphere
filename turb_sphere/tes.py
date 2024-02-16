@@ -272,7 +272,7 @@ class TES:
             s = np.log(r)
 
             # Solve ODE
-            res = solve_ivp(_dydx, (s[0], s[-1]), y0, t_eval=s, method='LSODA')
+            res = solve_ivp(_dydx, (s[0], s[-1]), y0, t_eval=s, method='RK45')
             # TODO(SMOON) resolve this
             if not res.success:
                 print(res)
