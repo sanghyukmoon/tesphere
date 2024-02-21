@@ -110,7 +110,7 @@ class TES:
 
         # Sanity check
         if sigma > 0:
-            if not np.isclose(self.sigma, sigma, atol=1e-1):
+            if not np.isclose(self.sigma, sigma, atol=1e-2):
                 raise ValueError(f"The computed velocity dispersion {self.sigma:.2f} is different"
                                  f" from the input velocity dispersion {sigma:.2f}."
                                  " The interpolation table may be either currupted"
@@ -174,10 +174,10 @@ class TES:
             rmax = self.rmax
         def _func(r):
             return self.rho(r)*(self.f(r) - 1)*r**2
-        num, _ = quad(_func, 0, rmax, epsabs=1e-3)
+        num, _ = quad(_func, 0, rmax, epsabs=1e-4)
         def _func(r):
             return self.rho(r)*r**2
-        den, _ = quad(_func, 0, rmax, epsabs=1e-3)
+        den, _ = quad(_func, 0, rmax, epsabs=1e-4)
         return np.sqrt(num/den)
 
     def f(self, r):
