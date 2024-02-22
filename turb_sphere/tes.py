@@ -1,4 +1,4 @@
-from scipy.integrate import solve_ivp, quad
+from scipy.integrate import solve_ivp, quad, odeint
 from scipy.optimize import minimize_scalar, brentq
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
@@ -174,10 +174,10 @@ class TES:
             rmax = self.rmax
         def _func(r):
             return self.rho(r)*(self.f(r) - 1)*r**2
-        num, _ = quad(_func, 0, rmax, epsabs=1e-4)
+        num, _ = quad(_func, 0, rmax, epsrel=1e-6)
         def _func(r):
             return self.rho(r)*r**2
-        den, _ = quad(_func, 0, rmax, epsabs=1e-4)
+        den, _ = quad(_func, 0, rmax, epsrel=1e-6)
         return np.sqrt(num/den)
 
     def f(self, r):
@@ -228,6 +228,61 @@ class TES:
         ucrit = res.x
         return ucrit
 
+#    def solve(self, rin):
+#        """Solve equilibrium equation.
+#
+#        Parameters
+#        ----------
+#        rin : float or array
+#            Dimensionless radii
+#
+#        Returns
+#        -------
+#        u : float or array
+#        du : float array
+#            Derivative of u: du/dr
+#        """
+#        def _dydx(s, y):
+#            """ODE in logr space"""
+#            u, du = y
+#            f = self.f(np.exp(s))
+#            # Coefficients of the 2nd order ODE.
+#            a = f
+#            b = (2*self.p + 1)*f - 2*self.p
+#            c = 4*np.pi*np.exp(u + 2*s)/f
+#            ddu = -(b/a)*du - (c/a)
+#            return np.array([du, ddu])
+#
+#        y0 = np.array([self.uc, 0])  # Initial conditions
+#
+#        rin = np.array(rin, dtype='float64')
+#        if np.all(rin <= self._rfloor):
+#            u = y0[0]*np.ones(rin.size)
+#            du = y0[1]*np.ones(rin.size)
+#        else:
+#            u = np.zeros(rin.size)
+#            du = np.zeros(rin.size)
+#
+#            # Use only the part above the floor for ODE integration.
+#            mask = rin > self._rfloor
+#            u[~mask] = y0[0]  # Set to IC for r < rfloor
+#            du[~mask] = y0[1]  # Set to IC for r < rfloor
+#            r = rin[mask]
+#            r = np.insert(r, 0, self._rfloor)  # Insert initial value point
+#            s = np.log(r)
+#
+#            # Solve ODE
+#            res = solve_ivp(_dydx, (s[0], s[-1]), y0, t_eval=s, method='Radau')
+#            # TODO(SMOON) resolve this
+#            if not res.success:
+#                print(res)
+#                raise ValueError("Cannot solve the ODE")
+#            y = res.y
+#            u[mask] = y[0, 1:]
+#            du[mask] = y[1, 1:]/r[1:]
+#        return u.squeeze()[()], du.squeeze()[()]
+
+
     def solve(self, rin):
         """Solve equilibrium equation.
 
@@ -242,7 +297,7 @@ class TES:
         du : float array
             Derivative of u: du/dr
         """
-        def _dydx(s, y):
+        def _dydx(y, s):
             """ODE in logr space"""
             u, du = y
             f = self.f(np.exp(s))
@@ -272,12 +327,7 @@ class TES:
             s = np.log(r)
 
             # Solve ODE
-            res = solve_ivp(_dydx, (s[0], s[-1]), y0, t_eval=s, method='RK45')
-            # TODO(SMOON) resolve this
-            if not res.success:
-                print(res)
-                raise ValueError("Cannot solve the ODE")
-            y = res.y
-            u[mask] = y[0, 1:]
-            du[mask] = y[1, 1:]/r[1:]
+            y = odeint(_dydx, y0, s)
+            u[mask] = y[1:, 0]
+            du[mask] = y[1:, 1]/r[1:]
         return u.squeeze()[()], du.squeeze()[()]
