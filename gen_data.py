@@ -2,11 +2,13 @@ from turb_sphere import tes, utils
 import numpy as np
 import pickle
 from pathlib import Path
+import sys
 
-pindex = [0.3, 0.5, 0.7]
 sigma_min, sigma_max = 0.05, 20
 
-for p in pindex:
+pindex_list = np.array(sys.argv[1:], dtype=float)
+for p in pindex_list:
+    print(f"Generate data for p = {p}")
     velocity_dispersions = np.logspace(np.log10(sigma_min), np.log10(sigma_max), 1024)
     velocity_dispersions = np.insert(velocity_dispersions, 0, 0)
     rhoc, rhoe, radius, mass = [], [], [], []
