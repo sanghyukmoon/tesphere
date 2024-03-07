@@ -333,7 +333,7 @@ class TESc:
         float
             Critical radius
         """
-        xi = np.logspace(0, 3, 512)
+        xi = np.logspace(0, 2, 512)
         kappa = self.get_bulk_modulus(xi)
         idx = (kappa < 0).nonzero()[0]
         if len(idx) < 1:
@@ -460,7 +460,8 @@ class TESc:
             u = y0[0]*np.ones(xi.size)
             du = y0[1]*np.ones(xi.size)
         else:
-            y = odeint(self._dydx, y0, np.log(xi))
+            y = odeint(self._dydx, y0, np.log(xi),
+                       Dfun=self._jac, col_deriv=True)
             u = y[istart:, 0]
             du = y[istart:, 1]/xi[istart:]
 
@@ -471,15 +472,15 @@ class TESc:
         # return scala when the input is scala
         return u.squeeze()[()], du.squeeze()[()]
 
-    def sonic_radius_floor(self, atol=1e-4):
-        a = 1e-3
+    def sonic_radius_floor(self, rtol=1e-3):
+        a = 1e-6
         b = 999
 
         def func(x):
             tsc = TESc(p=self.p, rs=x)
             return tsc.rmax
 
-        while (b - a > atol):
+        while ((b - a)/a > rtol):
             c = (a + b)/2
             if np.isinf(func(c)):
                 a = c
@@ -515,6 +516,17 @@ class TESc:
         c = -df - ddf - np.exp(2*t - y1)
         dy2 = -(b/a)*y2 - (c/a)
         return np.array([dy1, dy2])
+
+    def _jac(self, y, t):
+        y1, y2 = y
+        x = np.exp(t)
+        f = self.f(x)
+        df = 2*self.p*(f - 1)
+        j11 = 0
+        j12 = 1
+        j21 = -(1./f)*np.exp(2*t - y1)
+        j22 = -(1 + df/f)
+        return [[j11, j21], [j12, j22]]
 
     def _get_sonic_radius_derivatives(self, xi, dlog_xi_s=1e-3):
         log_xi_s = np.log(self.rs)
