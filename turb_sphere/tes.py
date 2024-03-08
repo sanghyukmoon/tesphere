@@ -541,3 +541,179 @@ class TESc:
         dlogm = (np.log(m[1]) - np.log(m[0])) / (2*dlog_xi_s)
 
         return du, dlogm
+
+
+class Logotrope:
+    """Turbulent equilibrium sphere of a fixed central density.
+
+    Parameters
+    ----------
+    p : float, optional
+        power-law index of the velocity dispersion.
+    rs : float, optional
+        dimensionless sonic radius.
+
+    Attributes
+    ----------
+    p : float
+        power-law index of the velocity dispersion.
+    rs : float
+        dimensionless sonic radius.
+    """
+    def __init__(self, A, sigma=0):
+        self._rfloor = 1e-5
+        self._sigma = None
+        if sigma > 0:
+            def _func(A):
+                ts = Logotrope(A)
+                return ts.sigma - sigma
+            self.A = brentq(_func, 0.15, 1)
+        else:
+            self.A = A
+        self.rmax = self.critical_radius()
+
+    def rho(self, r):
+        """Calculate normalized density.
+
+        Notes
+        -----
+        rho = rho_c * e^u
+        """
+        u, _ = self.solve(r)
+        return np.exp(-u)
+
+    def dv(self, r):
+        r = np.atleast_1d(r)
+        u, _ = self.solve(r)
+        res = np.zeros(len(r))
+        sig2 = (1 - self.A*u)*np.exp(u) - 1
+        np.sqrt(sig2, where=(sig2 >= 0), out=res)
+        return res
+
+    @property
+    def sigma(self):
+        """Compute or return the velocity dispersion"""
+        if self._sigma is None:
+            self._sigma = self.compute_sigma()
+        return self._sigma
+
+    def compute_sigma(self, rmax=None):
+        """Calculate mass-weighted mean velocity dispersion.
+
+        Parameters
+        ----------
+        rmax : float, optional
+            Outer radius within which the velocity dispersion is computed.
+            If not given, use the outer radius.
+        """
+        if rmax is None:
+            rmax = self.rmax
+        def _func(r):
+            return self.rho(r)*self.dv(r)**2*r**2
+        num, _ = quad(_func, 0, rmax, epsrel=1e-6)
+        def _func(r):
+            return self.rho(r)*r**2
+        den, _ = quad(_func, 0, rmax, epsrel=1e-6)
+        return np.sqrt(num/den)
+
+    def solve(self, xi):
+        """Solve equilibrium equation
+
+        Parameters
+        ----------
+        xi : array
+            Dimensionless radii
+
+        Returns
+        -------
+        u : array
+            Log density u = log(rho/rho_c)
+        du : array
+            Derivative of u: d(u)/d(xi)
+        """
+        if isinstance(xi, float) and np.isinf(xi):
+            return np.inf, 0
+        else:
+            mask = np.isinf(xi)
+
+        xi = np.array(xi, dtype='float64')
+        y0 = np.array([0, 0])
+        if xi.min() > self._rfloor:
+            xi = np.insert(xi, 0, self._rfloor)
+            istart = 1
+        else:
+            istart = 0
+        if np.all(xi <= self._rfloor):
+            u = y0[0]*np.ones(xi.size)
+            du = y0[1]*np.ones(xi.size)
+        else:
+            y = odeint(self._dydx, y0, np.log(xi))
+            u = y[istart:, 0]
+            du = y[istart:, 1]/xi[istart:]
+
+        if not isinstance(xi, float):
+            u[mask] = np.inf
+            du[mask] = 0
+
+        # return scala when the input is scala
+        return u.squeeze()[()], du.squeeze()[()]
+
+    def critical_radius(self):
+        """Find critical TES radius
+
+        Returns
+        -------
+        float
+            Critical radius
+        """
+        xi = np.logspace(0, 3, 512)
+        kappa = self.get_bulk_modulus(xi)
+        idx = (kappa < 0).nonzero()[0]
+        if len(idx) < 1:
+            # kappa is everywhere positive, meaning that this TES
+            # is stable at every radius. Return inf.
+            return np.inf
+        else:
+            idx = idx[0] - 1
+        func = lambda x: self.get_bulk_modulus(10**x)
+
+        x0, x1 = np.log10(xi[idx]), np.log10(xi[idx+1])
+        try:
+            logrmax = newton(func, x0, x1=x1).squeeze()[()]
+        except:
+            logrmax = np.nan
+        return 10**logrmax
+
+    def get_bulk_modulus(self, xi):
+        # Perturbation with the fixed turbulent velocity field
+        # i.e., p = r_s = const.
+        u, du = self.solve(xi)
+        dpsi = self.A*np.exp(u)*du
+        num = 1 - dpsi**2/18/(1 - self.A*u)
+        den = 1 - dpsi / (9*xi)
+        kappa = num / den
+        return kappa
+
+    def _dydx(self, y, t):
+        """Differential equation for hydrostatic equilibrium.
+
+        Parameters
+        ----------
+        y : array
+            Vector of dependent variables
+        x : array
+            Independent variable
+
+        Returns
+        -------
+        array
+            Vector of (dy/dx)
+        """
+        y1, y2 = y
+        dy1 = y2
+
+        a = self.A
+        b = 2*self.A
+        c = -9*np.exp(2*t - 2*y1)
+        dy2 = -(b/a)*y2 - (c/a)
+        return np.array([dy1, dy2])
