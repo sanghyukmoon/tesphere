@@ -68,7 +68,7 @@ def run_TESc():
         sigma_min = ts.sigma
         rfloor = ts.sonic_radius_floor()
         ts = tes.TESc(p=p, rs=rfloor)
-        sigma_max = ts.sigma
+        sigma_max = ts.sigma - 1e-6  # avoid exceeding sigma_max by truncation error in log10
 
         velocity_dispersions = np.logspace(np.log10(sigma_min), np.log10(sigma_max), 1024)
         velocity_dispersions = np.insert(velocity_dispersions, 0, 0)
