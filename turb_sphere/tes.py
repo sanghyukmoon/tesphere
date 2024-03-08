@@ -297,15 +297,16 @@ class TESc:
     def __init__(self, p=0.5, rs=np.inf, sigma=0, compute_rcrit=True):
         self._rfloor = 1e-5
         self._rs_ceil = 1e5
+        self._sigma = None
         self.p = p
         if sigma > 0:
             def get_sigv(rs, p):
                 tsc = TESc(p=p, rs=rs, compute_rcrit=False)
-                sigv = tsc.sigma()
+                sigv = tsc.sigma
                 return sigv
             self._rs_floor = self.sonic_radius_floor()
             tsc = TESc(p=p, rs=self._rs_floor, compute_rcrit=False)
-            if tsc.sigma() < sigma:
+            if tsc.sigma < sigma:
                 raise ValueError(f"sigma = {sigma:.2f} is too large. Cannot find xi_crit due to"
                                  " the steep dependence of xi_crit on xi_s")
             self.rs = brentq(lambda x: get_sigv(x, p) - sigma,
@@ -324,6 +325,9 @@ class TESc:
         """
         u, _ = self.solve(r)
         return np.exp(-u)
+
+    def ptot(self, r):
+        return self.f(r)*self.rho(r)
 
     def critical_radius(self):
         """Find critical TES radius
@@ -404,7 +408,14 @@ class TESc:
     def f(self, r):
         return 1 + self.dv(r)**2
 
+    @property
     def sigma(self):
+        """Compute or return the velocity dispersion"""
+        if self._sigma is None:
+            self._sigma = self.compute_sigma()
+        return self._sigma
+
+    def compute_sigma(self):
         """Calculate mass-weighted mean velocity dispersion within rcrit
 
         Returns
@@ -581,6 +592,10 @@ class Logotrope:
         """
         u, _ = self.solve(r)
         return np.exp(-u)
+
+    def ptot(self, r):
+        u, _ = self.solve(r)
+        return 1 - self.A*u
 
     def dv(self, r):
         r = np.atleast_1d(r)

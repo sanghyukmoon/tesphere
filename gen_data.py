@@ -65,10 +65,10 @@ def run_TESc():
 
         # Set minimum and maxmimum velocity dispersion
         ts = tes.TESc(p=p, rs=1e2)
-        sigma_min = ts.sigma()
+        sigma_min = ts.sigma
         rfloor = ts.sonic_radius_floor()
         ts = tes.TESc(p=p, rs=rfloor)
-        sigma_max = ts.sigma()
+        sigma_max = ts.sigma
 
         velocity_dispersions = np.logspace(np.log10(sigma_min), np.log10(sigma_max), 1024)
         velocity_dispersions = np.insert(velocity_dispersions, 0, 0)
