@@ -298,6 +298,8 @@ class TESc:
         self._rfloor = 1e-5
         self._rs_ceil = 1e5
         self._sigma = None
+        self._rpnorm = None
+        self._rdnorm = None
         self.p = p
         if sigma > 0:
             def get_sigv(rs, p):
@@ -440,6 +442,26 @@ class TESc:
         sigv = np.sqrt(num/den)
         return sigv
 
+    @property
+    def rpnorm(self):
+        if self._rpnorm is None:
+            self._rpnorm = self.compute_rpnorm()
+        return self._rpnorm
+
+    def compute_rpnorm(self):
+        rpn = np.sqrt(4*np.pi/self.ptot(self.rmax))
+        return rpn
+
+    @property
+    def rdnorm(self):
+        if self._rdnorm is None:
+            self._rdnorm = self.compute_rdnorm()
+        return self._rdnorm
+
+    def compute_rdnorm(self):
+        rdn = np.sqrt(4*np.pi/self.rho(self.rmax))
+        return rdn
+
     def solve(self, xi):
         """Solve equilibrium equation
 
@@ -574,6 +596,8 @@ class Logotrope:
     def __init__(self, A, sigma=0):
         self._rfloor = 1e-5
         self._sigma = None
+        self._rpnorm = None
+        self._rdnorm = None
         if sigma > 0:
             def _func(A):
                 ts = Logotrope(A)
@@ -630,6 +654,28 @@ class Logotrope:
             return self.rho(r)*r**2
         den, _ = quad(_func, 0, rmax, epsrel=1e-6)
         return np.sqrt(num/den)
+
+    @property
+    def rpnorm(self):
+        if self._rpnorm is None:
+            self._rpnorm = self.compute_rpnorm()
+        return self._rpnorm
+
+    def compute_rpnorm(self):
+        rpn = np.sqrt(4*np.pi/self.ptot(self.rmax))/3
+        return rpn
+
+    @property
+    def rdnorm(self):
+        if self._rdnorm is None:
+            self._rdnorm = self.compute_rdnorm()
+        return self._rdnorm
+
+    def compute_rdnorm(self):
+        rdn = np.sqrt(4*np.pi/self.rho(self.rmax))/3
+        return rdn
+
+
 
     def solve(self, xi):
         """Solve equilibrium equation
