@@ -140,12 +140,12 @@ class TES:
         u, _ = self.solve(r)
         return np.exp(u) / self.f(r)
 
-    def vr(self, r):
+    def dv(self, r):
         """Calculate turbulent velocity.
 
         Notes
         -----
-        vr = c_s * (r / r_s)^p
+        dv = c_s * (r / r_s)^p
         """
         return (r / self.rs)**self.p
 
