@@ -87,7 +87,8 @@ def run_TESc():
         res = dict(ucrit=ucrit,
                    rcrit=rcrit,
                    mcrit=mcrit,
-                   rsonic=rsonic)
+                   rsonic=rsonic,
+                   veldisp=velocity_dispersions)
         fp = Path(__file__).parent / f"data/tsc.p{p}.p"
         with open(fp, "wb") as handle:
             pickle.dump(res, handle)
