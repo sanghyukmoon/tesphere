@@ -140,6 +140,10 @@ class TES:
         u, _ = self.solve(r)
         return np.exp(u) / self.f(r)
 
+    def ptot(self, r):
+        u, _ = self.solve(r)
+        return np.exp(u)
+
     def dv(self, r):
         """Calculate turbulent velocity.
 
@@ -317,6 +321,9 @@ class TESc:
             self.rs = rs
         if compute_rcrit:
             self.rmax = self.critical_radius()
+            self.mass = self.menc(self.rmax)
+            self.rhoavg = (4*np.pi)**1.5*self.mass/(4*np.pi*self.rmax**3/3)
+            self.rg = np.sqrt(4*np.pi / self.rhoavg)
 
     def rho(self, r):
         """Calculate normalized density.
@@ -339,7 +346,7 @@ class TESc:
         float
             Critical radius
         """
-        xi = np.logspace(0, 2, 512)
+        xi = np.logspace(0, 3, 512)
         kappa = self.get_bulk_modulus(xi)
         idx = (kappa < 0).nonzero()[0]
         if len(idx) < 1:
@@ -606,6 +613,9 @@ class Logotrope:
         else:
             self.A = A
         self.rmax = self.critical_radius()
+        # TODO Calculate enclosed mass within Logotrope
+        # self.rg = np.sqrt(4*np.pi / self.rhoavg) / 3
+
 
     def rho(self, r):
         """Calculate normalized density.
@@ -674,8 +684,6 @@ class Logotrope:
     def compute_rdnorm(self):
         rdn = np.sqrt(4*np.pi/self.rho(self.rmax))/3
         return rdn
-
-
 
     def solve(self, xi):
         """Solve equilibrium equation
