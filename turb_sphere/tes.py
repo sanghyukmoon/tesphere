@@ -322,7 +322,8 @@ class TESc:
         if compute_rcrit:
             self.rmax = self.critical_radius()
             self.mass = self.menc(self.rmax)
-            self.rhoavg = (4*np.pi)**1.5*self.mass/(4*np.pi*self.rmax**3/3)
+            rmax = self.rmax / np.sqrt(4*np.pi)
+            self.rhoavg = self.mass/(4*np.pi*rmax**3/3)
             self.rg = np.sqrt(4*np.pi / self.rhoavg)
 
     def rho(self, r):
@@ -613,9 +614,10 @@ class Logotrope:
         else:
             self.A = A
         self.rmax = self.critical_radius()
-        # TODO Calculate enclosed mass within Logotrope
-        # self.rg = np.sqrt(4*np.pi / self.rhoavg) / 3
-
+        self.mass = self.menc(self.rmax)
+        rmax = self.rmax*(3/np.sqrt(4*np.pi))
+        self.rhoavg = self.mass/(4*np.pi*rmax**3/3)
+        self.rg = np.sqrt(4*np.pi / self.rhoavg) / 3
 
     def rho(self, r):
         """Calculate normalized density.
@@ -638,6 +640,19 @@ class Logotrope:
         sig2 = (1 - self.A*u)*np.exp(u) - 1
         np.sqrt(sig2, where=(sig2 >= 0), out=res)
         return res
+
+    def menc(self, r):
+        # If xi0 is inf, mass is also inf.
+        if isinstance(r, float) and np.isinf(r):
+            return np.inf
+        else:
+            mask = np.isinf(r)
+        u, du = self.solve(r)
+        m = 3/np.sqrt(4*np.pi)*self.A*r**2*np.exp(u)*du
+        if not isinstance(r, float):
+            m[mask] = np.inf
+        # return scala when the input is scala
+        return m.squeeze()[()]       
 
     @property
     def sigma(self):
