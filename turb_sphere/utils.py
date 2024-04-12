@@ -39,6 +39,11 @@ def integrate_los(f, rprj, rmax_sph):
 def integrate_2d_projected(f, rmax_prj, rmax_sph):
     """Calculate 2D integral over the projected area
 
+    f is a function of the spherical radius r. This function integrates
+    f over the quasi-cylindrical volume extended along z direction and
+    bracketed within [0, rmax_pj] along R direction. The maximum extension
+    along z direction depends on R such that z_max = sqrt(rmax_sph^2 - R^2).
+
     Parameters
     ----------
     f : function
@@ -59,8 +64,14 @@ def integrate_2d_projected(f, rmax_prj, rmax_sph):
     def func(z, rprj):
         r = np.sqrt(rprj**2 + z**2)
         return f(r)*2*np.pi*rprj
-
-    res, _ = dblquad(func, 0, rmax_prj, lambda x: 0, zmax, epsrel=1e-2)
+    if isinstance(rmax_prj, np.ndarray):
+        res = []
+        for R in rmax_prj:
+            y1, _ = dblquad(func, 0, R, lambda x: 0, zmax, epsrel=1e-2)
+            res.append(y1)
+        res = np.array(res)
+    else:
+        res, _ = dblquad(func, 0, rmax_prj, lambda x: 0, zmax, epsrel=1e-2)
     return 2*res
 
 
