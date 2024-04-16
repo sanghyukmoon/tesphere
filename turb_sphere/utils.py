@@ -105,3 +105,38 @@ def fwhm(f, rmax_sph, which='volume'):
     else:
         raise ValueError("which must be either volume or column")
     return fwhm
+
+
+def fwhm_bgrsub(f, rmax_sph):
+    """Calculate background-subtracted FWHM
+
+    Iterate until dcol = 0 at r=R_FWHM.
+
+    Parameters
+    ----------
+    f : function
+        The function that returns the volume density at a given
+        spherical radius.
+    rmax_sph : float
+        The maximum spherical radius to integrate out.
+
+    Returns
+    -------
+    fwhm : float
+        The FWHM of the column density profile.
+    """
+
+    def dcol(r):
+        """Return column density at radius r"""
+        res = integrate_los(f, r, rmax_sph)
+        return res
+
+    rfwhm = fwhm(f, rmax_sph, which='volume')
+    rfwhm0 = 1e100
+
+    while np.abs((rfwhm - rfwhm0)/rfwhm0) > 1e-3:
+        rfwhm0 = rfwhm
+        dcol_bgr = dcol(rfwhm)
+        rfwhm = fwhm(lambda x: dcol(x) - dcol_bgr, rmax_sph, which='column')
+
+    return rfwhm
