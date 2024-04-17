@@ -2,7 +2,7 @@ import numpy as np
 from scipy.integrate import quad, dblquad
 from scipy.optimize import brentq
 
-def integrate_los(f, rprj, rmax_sph):
+def integrate_los(f, rprj, rmax_sph, epsrel=1e-2):
     """Calculate column density
 
     Parameters
@@ -26,17 +26,17 @@ def integrate_los(f, rprj, rmax_sph):
         dcol = []
         for R in rprj:
             zmax = np.sqrt(rmax_sph**2 - R**2)
-            res, _ = quad(func, 0, zmax, args=(R,), epsrel=1e-2, limit=200)
+            res, _ = quad(func, 0, zmax, args=(R,), epsrel=epsrel, limit=200)
             dcol.append(2*res)
         dcol = np.array(dcol)
     else:
         zmax = np.sqrt(rmax_sph**2 - rprj**2)
-        res, _ = quad(func, 0, zmax, args=(rprj,), epsrel=1e-2, limit=200)
+        res, _ = quad(func, 0, zmax, args=(rprj,), epsrel=epsrel, limit=200)
         dcol = 2*res
     return dcol
 
 
-def integrate_2d_projected(f, rmax_prj, rmax_sph):
+def integrate_2d_projected(f, rmax_prj, rmax_sph, epsrel=1e-2):
     """Calculate 2D integral over the projected area
 
     f is a function of the spherical radius r. This function integrates
@@ -67,15 +67,15 @@ def integrate_2d_projected(f, rmax_prj, rmax_sph):
     if isinstance(rmax_prj, np.ndarray):
         res = []
         for R in rmax_prj:
-            y1, _ = dblquad(func, 0, R, lambda x: 0, zmax, epsrel=1e-2)
+            y1, _ = dblquad(func, 0, R, lambda x: 0, zmax, epsrel=epsrel)
             res.append(y1)
         res = np.array(res)
     else:
-        res, _ = dblquad(func, 0, rmax_prj, lambda x: 0, zmax, epsrel=1e-2)
+        res, _ = dblquad(func, 0, rmax_prj, lambda x: 0, zmax, epsrel=epsrel)
     return 2*res
 
 
-def fwhm(f, rmax_sph, which='volume'):
+def fwhm(f, rmax_sph, which='volume', epsrel=1e-2):
     """Calculate the FWHM of the column density profile
 
     Parameters
@@ -96,8 +96,8 @@ def fwhm(f, rmax_sph, which='volume'):
         The FWHM of the column density profile.
     """
     if which == 'volume':
-        dcol0 = integrate_los(f, 0, rmax_sph)
-        fwhm = 2*brentq(lambda x: integrate_los(f, x, rmax_sph) - 0.5*dcol0,
+        dcol0 = integrate_los(f, 0, rmax_sph, epsrel=epsrel)
+        fwhm = 2*brentq(lambda x: integrate_los(f, x, rmax_sph, epsrel=epsrel) - 0.5*dcol0,
                         0, rmax_sph)
     elif which == 'column':
         dcol0 = f(0)
@@ -107,7 +107,7 @@ def fwhm(f, rmax_sph, which='volume'):
     return fwhm
 
 
-def fwhm_bgrsub(f, rmax_sph):
+def fwhm_bgrsub(f, rmax_sph, epsrel=1e-2):
     """Calculate background-subtracted FWHM
 
     Iterate until dcol = 0 at r=R_FWHM.
@@ -128,15 +128,15 @@ def fwhm_bgrsub(f, rmax_sph):
 
     def dcol(r):
         """Return column density at radius r"""
-        res = integrate_los(f, r, rmax_sph)
+        res = integrate_los(f, r, rmax_sph, epsrel=epsrel/2)
         return res
 
-    rfwhm = fwhm(f, rmax_sph, which='volume')
+    rfwhm = fwhm(f, rmax_sph, which='volume', epsrel=epsrel/2)
     rfwhm0 = 1e100
 
-    while np.abs((rfwhm - rfwhm0)/rfwhm0) > 1e-3:
+    while np.abs((rfwhm - rfwhm0)/rfwhm0) > epsrel:
         rfwhm0 = rfwhm
         dcol_bgr = dcol(rfwhm)
-        rfwhm = fwhm(lambda x: dcol(x) - dcol_bgr, rmax_sph, which='column')
+        rfwhm = fwhm(lambda x: dcol(x) - dcol_bgr, rmax_sph, which='column', epsrel=epsrel/2)
 
     return rfwhm
