@@ -107,7 +107,7 @@ def fwhm(f, rmax_sph, which='volume', epsrel=1e-2):
     return fwhm
 
 
-def fwhm_bgrsub(f, rmax_sph, epsrel=1e-2):
+def fwhm_bgrsub(f, rmax_sph, method='iterative', rbgr=np.nan, epsrel=1e-2):
     """Calculate background-subtracted FWHM
 
     Iterate until dcol = 0 at r=R_FWHM.
@@ -131,12 +131,21 @@ def fwhm_bgrsub(f, rmax_sph, epsrel=1e-2):
         res = integrate_los(f, r, rmax_sph, epsrel=epsrel/2)
         return res
 
-    rfwhm = fwhm(f, rmax_sph, which='volume', epsrel=epsrel/2)
-    rfwhm0 = 1e100
+    match method:
+        case 'radius':
+            if np.isnan(rbgr):
+                raise ValueError("radius based background subtraction requires `rbgr` parameter")
+            dcol_bgr = dcol(rbgr)
+            rfwhm = fwhm(lambda x: dcol(x) - dcol_bgr, rmax_sph, which='column', epsrel=epsrel/2)
+        case 'iterative':
+            rfwhm = fwhm(f, rmax_sph, which='volume', epsrel=epsrel/2)
+            rfwhm0 = 1e100
 
-    while np.abs((rfwhm - rfwhm0)/rfwhm0) > epsrel:
-        rfwhm0 = rfwhm
-        dcol_bgr = dcol(rfwhm)
-        rfwhm = fwhm(lambda x: dcol(x) - dcol_bgr, rmax_sph, which='column', epsrel=epsrel/2)
+            while np.abs((rfwhm - rfwhm0)/rfwhm0) > epsrel:
+                rfwhm0 = rfwhm
+                dcol_bgr = dcol(rfwhm)
+                rfwhm = fwhm(lambda x: dcol(x) - dcol_bgr, rmax_sph, which='column', epsrel=epsrel/2)
+        case _:
+            raise ValueError(f"method {method} is not supported")
 
     return rfwhm
