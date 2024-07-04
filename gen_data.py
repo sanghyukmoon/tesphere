@@ -12,23 +12,26 @@ def run_TES():
 
         rs_min = tes.minimum_sonic_radius(pindex=pindex)
         sonic_radius = np.logspace(np.log10(rs_min), 2, 10**4)
-        rcrit, mcrit, ucrit, sigma = [], [], [], []
+        rcrit, mcrit, ucrit, sigma, rfwhm = [], [], [], [], []
         for rsonic in sonic_radius:
             ts = tes.TES(pindex=pindex, rsonic=rsonic)
             rcrit.append(ts.rcrit)
             mcrit.append(ts.mcrit)
             ucrit.append(ts.ucrit)
             sigma.append(ts.sigma)
+            rfwhm.append(utils.fwhm(ts.density, ts.rcrit))
         rcrit = np.array(rcrit)
         mcrit = np.array(mcrit)
         ucrit = np.array(ucrit)
         sigma = np.array(sigma)
+        rfwhm = np.array(rfwhm)
 
         res = dict(ucrit=ucrit,
                    rcrit=rcrit,
                    mcrit=mcrit,
                    rsonic=sonic_radius,
-                   sigma=sigma)
+                   sigma=sigma,
+                   rfwhm=rfwhm)
         fp = Path(__file__).parent / f"data/tsc.p{pindex}.p"
         with open(fp, "wb") as handle:
             pickle.dump(res, handle)
