@@ -75,8 +75,12 @@ def integrate_2d_projected(f, rmax_prj, rmax_sph, epsrel=1e-2):
     return 2*res
 
 
-def fwhm(f, rmax_sph, which='volume', epsrel=1e-2):
+def fwhm(f, rmax, which='volume', epsrel=1e-2):
     """Calculate the FWHM of the column density profile
+
+    Caution: This does not necessarily find the "first" root, such that
+    it might overestimate fwhm if there are multiple crossings. It is
+    user's responsibility to provide appropriate rmax.
 
     Parameters
     ----------
@@ -84,8 +88,9 @@ def fwhm(f, rmax_sph, which='volume', epsrel=1e-2):
         The function that returns the volume/column density at a given
         spherical radius.
         Either rho(r) or Sigma(r) depending on `which`.
-    rmax_sph : float
-        The maximum spherical radius to integrate out.
+    rmax : float
+        If which='volume', the maximum spherical radius to integrate out.
+        If which='column', the maximum radius to bracket the root.
     which : str, optional
         If the input is volume density, `volume`
         If the input is column density, `column`
@@ -96,12 +101,12 @@ def fwhm(f, rmax_sph, which='volume', epsrel=1e-2):
         The FWHM of the column density profile.
     """
     if which == 'volume':
-        dcol0 = integrate_los(f, 0, rmax_sph, epsrel=epsrel)
-        fwhm = 2*brentq(lambda x: integrate_los(f, x, rmax_sph, epsrel=epsrel) - 0.5*dcol0,
-                        0, rmax_sph)
+        dcol0 = integrate_los(f, 0, rmax, epsrel=epsrel)
+        fwhm = 2*brentq(lambda x: integrate_los(f, x, rmax, epsrel=epsrel) - 0.5*dcol0,
+                        0, rmax)
     elif which == 'column':
         dcol0 = f(0)
-        fwhm = 2*brentq(lambda x: f(x) - 0.5*dcol0, 0, rmax_sph)
+        fwhm = 2*brentq(lambda x: f(x) - 0.5*dcol0, 0, rmax)
     else:
         raise ValueError("which must be either volume or column")
     return fwhm
