@@ -36,5 +36,22 @@ def run_TES():
         with open(fp, "wb") as handle:
             pickle.dump(res, handle)
 
+
+def manuscript_table1():
+    pindex = 0.5
+    rs_min = tes.minimum_sonic_radius(pindex=pindex)
+    sonic_radius = np.logspace(np.log10(rs_min), 3, 20000)
+    f = open("tab2.txt", "w")
+    for rsonic in sonic_radius:
+        ts = tes.TES(pindex=pindex, rsonic=rsonic)
+        f.write(f"{rsonic:.5e}, ")
+        f.write(f"{ts.rcrit:.5e}, ")
+        f.write(f"{ts.mcrit:.5e}, ")
+        f.write(f"{ts.ucrit:.5e}, ")
+        f.write(f"{ts.sigma:.5e}\n")
+    f.close()
+
+
 if __name__ == "__main__":
-    run_TES()
+#    run_TES()
+    manuscript_table1()
