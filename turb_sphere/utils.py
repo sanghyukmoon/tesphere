@@ -2,13 +2,15 @@ import numpy as np
 from scipy.integrate import quad, dblquad
 from scipy.optimize import brentq
 
+
 def integrate_los(f, rprj, rmax_sph, epsrel=1e-2):
     """Calculate column density
 
     Parameters
     ----------
     f : function
-        The function that returns the volume density at a given spherical radius.
+        The function that returns the volume density at a given spherical
+        radius.
     rprj : float
         Projected radius at which the line-of-sight integration is performed.
     rmax_sph : float
@@ -47,7 +49,8 @@ def integrate_2d_projected(f, rmax_prj, rmax_sph, epsrel=1e-2):
     Parameters
     ----------
     f : function
-        The function that returns the volume density at a given spherical radius.
+        The function that returns the volume density at a given spherical
+        radius.
     rmax_prj : float
         Maximum radial extent in the projected plane.
     rmax_sph : float
@@ -102,8 +105,8 @@ def fwhm(f, rmax, which='volume', epsrel=1e-2):
     """
     if which == 'volume':
         dcol0 = integrate_los(f, 0, rmax, epsrel=epsrel)
-        fwhm = 2*brentq(lambda x: integrate_los(f, x, rmax, epsrel=epsrel) - 0.5*dcol0,
-                        0, rmax)
+        fwhm = 2*brentq(lambda x: integrate_los(f, x, rmax, epsrel=epsrel)
+                        - 0.5*dcol0, 0, rmax)
     elif which == 'column':
         dcol0 = f(0)
         fwhm = 2*brentq(lambda x: f(x) - 0.5*dcol0, 0, rmax)
@@ -139,9 +142,11 @@ def fwhm_bgrsub(f, rmax_sph, method='iterative', rbgr=np.nan, epsrel=1e-2):
     match method:
         case 'radius':
             if np.isnan(rbgr):
-                raise ValueError("radius based background subtraction requires `rbgr` parameter")
+                raise ValueError("radius based background subtraction requires"
+                                 " `rbgr` parameter")
             dcol_bgr = dcol(rbgr)
-            rfwhm = fwhm(lambda x: dcol(x) - dcol_bgr, rmax_sph, which='column', epsrel=epsrel/2)
+            rfwhm = fwhm(lambda x: dcol(x) - dcol_bgr, rmax_sph,
+                         which='column', epsrel=epsrel/2)
         case 'iterative':
             rfwhm = fwhm(f, rmax_sph, which='volume', epsrel=epsrel/2)
             rfwhm0 = 1e100
@@ -149,7 +154,8 @@ def fwhm_bgrsub(f, rmax_sph, method='iterative', rbgr=np.nan, epsrel=1e-2):
             while np.abs((rfwhm - rfwhm0)/rfwhm0) > epsrel:
                 rfwhm0 = rfwhm
                 dcol_bgr = dcol(rfwhm)
-                rfwhm = fwhm(lambda x: dcol(x) - dcol_bgr, rmax_sph, which='column', epsrel=epsrel/2)
+                rfwhm = fwhm(lambda x: dcol(x) - dcol_bgr, rmax_sph,
+                             which='column', epsrel=epsrel/2)
         case _:
             raise ValueError(f"method {method} is not supported")
 

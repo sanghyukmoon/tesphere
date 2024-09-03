@@ -1,11 +1,6 @@
-from scipy.integrate import solve_ivp, quad, odeint
+from scipy.integrate import quad, odeint
 from scipy.optimize import brentq, newton
-from scipy.interpolate import interp1d
-import matplotlib.pyplot as plt
 import numpy as np
-import logging
-import pickle
-from pathlib import Path
 
 
 class TES:
@@ -330,6 +325,7 @@ class Logotrope:
             sigma2 = self.velocity_dispersion(r)**2
             return r**2*rho*sigma2
         num, _ = quad(_func, 0, self.rcrit, epsrel=1e-6)
+
         def _func(r):
             rho = self.density(r)
             return r**2*rho
@@ -457,8 +453,9 @@ def minimum_sonic_radius(pindex, rtol=1e-3):
 
 
 def find_sonic_radius(pindex, sigma_target):
-    if sigma_target==0:
+    if sigma_target == 0:
         return np.infty
+
     def get_sigma(pindex, rsonic):
         ts = TES(pindex=pindex, rsonic=rsonic)
         return ts.sigma
