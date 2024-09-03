@@ -290,7 +290,7 @@ class TES:
         return rsonic
 
 class Logotrope:
-    """Turbulent equilibrium sphere of a fixed central density.
+    """Logotrope.
 
     xi = r/r_0 where r_0 = 3c_s/np.sqrt(4 pi G rho_c) following
     McLaughlin & Pudritz (1996). This scale length is three times
