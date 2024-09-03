@@ -8,8 +8,7 @@ import sys
 def run_TES():
     pindex_list = np.array(sys.argv[1:], dtype=float)
     for pindex in pindex_list:
-
-        velocity_dispersion = np.logspace(-1, 2, 100)
+        velocity_dispersion = np.logspace(-1, 1, 100)
         rcrit, mcrit, ucrit, rsonic, rfwhm = [], [], [], [], []
         for sigma in velocity_dispersion:
             print(f"[run_TES] Generate data for p = {pindex}, sigma = {sigma}")
@@ -40,11 +39,10 @@ def run_TES():
 def run_TESe():
     pindex_list = np.array(sys.argv[1:], dtype=float)
     for pindex in pindex_list:
-        print(f"Generate data for p = {pindex}")
-
-        velocity_dispersion = np.logspace(-1, 2, 100)
+        velocity_dispersion = np.logspace(-1, np.log10(50), 100)
         rcrit, mcrit, ucrit, rsonic = [], [], [], []
         for sigma in velocity_dispersion:
+            print(f"[run_TESe] Generate data for p = {pindex}, sigma = {sigma}")
             rs = tes.TESe.find_sonic_radius(pindex, sigma)
             ts = tes.TESe(pindex=pindex, rsonic=rs)
             rcrit.append(ts.rcrit)
@@ -82,6 +80,6 @@ def manuscript_table1():
 
 
 if __name__ == "__main__":
-    run_TES()
-#    run_TESe()
+#    run_TES()
+    run_TESe()
 #    manuscript_table1()
