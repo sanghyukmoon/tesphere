@@ -8,29 +8,29 @@ import sys
 def run_TES():
     pindex_list = np.array(sys.argv[1:], dtype=float)
     for pindex in pindex_list:
-        print(f"Generate data for p = {pindex}")
 
-        rs_min = tes.TES.minimum_sonic_radius(pindex=pindex)
-        sonic_radius = np.logspace(np.log10(rs_min), 2, 10**4)
-        rcrit, mcrit, ucrit, sigma, rfwhm = [], [], [], [], []
-        for rsonic in sonic_radius:
-            ts = tes.TES(pindex=pindex, rsonic=rsonic)
+        velocity_dispersion = np.logspace(-1, 2, 100)
+        rcrit, mcrit, ucrit, rsonic, rfwhm = [], [], [], [], []
+        for sigma in velocity_dispersion:
+            print(f"[run_TES] Generate data for p = {pindex}, sigma = {sigma}")
+            rs = tes.TES.find_sonic_radius(pindex, sigma)
+            ts = tes.TES(pindex=pindex, rsonic=rs)
             rcrit.append(ts.rcrit)
             mcrit.append(ts.mcrit)
             ucrit.append(ts.ucrit)
-            sigma.append(ts.sigma)
+            rsonic.append(ts.rsonic)
             rfwhm.append(utils.fwhm(ts.density, ts.rcrit))
         rcrit = np.array(rcrit)
         mcrit = np.array(mcrit)
         ucrit = np.array(ucrit)
-        sigma = np.array(sigma)
+        rsonic = np.array(rsonic)
         rfwhm = np.array(rfwhm)
 
         res = dict(ucrit=ucrit,
                    rcrit=rcrit,
                    mcrit=mcrit,
-                   rsonic=sonic_radius,
-                   sigma=sigma,
+                   rsonic=rsonic,
+                   sigma=velocity_dispersion,
                    rfwhm=rfwhm)
         fp = Path(__file__).parent / f"data/tsc.p{pindex}.p"
         with open(fp, "wb") as handle:
@@ -82,6 +82,6 @@ def manuscript_table1():
 
 
 if __name__ == "__main__":
-#    run_TES()
-    run_TESe()
+    run_TES()
+#    run_TESe()
 #    manuscript_table1()
