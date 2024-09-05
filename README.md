@@ -1,6 +1,6 @@
 # tesphere - Turbulent Equilibrium Sphere
 
-`tesphere` is a python package that implements the turbulent equilibrium sphere (TES) model introduced in Moon & Ostriker (2024, under review).
+`tesphere` is a python package that implements the turbulent equilibrium sphere (TES) model introduced in Moon & Ostriker (2024, in press).
 The TES is a family of equilibrium solutions to the angle-averaged equations of hydrodynamics under the following assumptions:
 * The second-order structure function for the turbulent velocity field is given by a power-law (i.e., there is a power-law linewidth-size relation).
 * The turbulence is isotropic.
@@ -20,6 +20,8 @@ which then determine the following attributes.
 Sanghyuk Moon (sanghyuk.moon at princeton dot edu)
 
 # Examples
+
+An example *jupyter notebook* file that reproduces the figures in Moon & Ostriker (2024) can be found in `example` folder. A few simple examples are provided below as a preview.
 
 ## Volume density profiles
 
