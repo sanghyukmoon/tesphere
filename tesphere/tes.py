@@ -102,13 +102,9 @@ class TES:
             return np.inf
         else:
             idx = idx[0] - 1
-        func = lambda x: self.bulk_modulus(10**x)
 
         x0, x1 = np.log10(xi[idx]), np.log10(xi[idx+1])
-        try:
-            logrmax = brentq(func, x0, x1)
-        except:
-            logrmax = np.nan
+        logrmax = brentq(lambda x: self.bulk_modulus(10**x), x0, x1)
         return 10**logrmax
 
     def bulk_modulus(self, xi):
@@ -362,13 +358,9 @@ class Logotrope:
             return np.inf
         else:
             idx = idx[0] - 1
-        func = lambda x: self.bulk_modulus(10**x)
 
         x0, x1 = np.log10(xi[idx]), np.log10(xi[idx+1])
-        try:
-            logrmax = brentq(func, x0, x1)
-        except:
-            logrmax = np.nan
+        logrmax = brentq(lambda x: self.bulk_modulus(10**x), x0, x1)
         return 10**logrmax
 
     def bulk_modulus(self, xi):
