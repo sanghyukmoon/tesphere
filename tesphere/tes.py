@@ -1,5 +1,5 @@
 from scipy.integrate import quad, odeint
-from scipy.optimize import brentq, newton, minimize_scalar
+from scipy.optimize import brentq, minimize_scalar
 import numpy as np
 
 
@@ -104,7 +104,7 @@ class TES:
 
         x0, x1 = np.log10(xi[idx]), np.log10(xi[idx+1])
         try:
-            logrmax = newton(func, x0, x1=x1).squeeze()[()]
+            logrmax = brentq(func, x0, x1)
         except:
             logrmax = np.nan
         return 10**logrmax
@@ -364,7 +364,7 @@ class Logotrope:
 
         x0, x1 = np.log10(xi[idx]), np.log10(xi[idx+1])
         try:
-            logrmax = newton(func, x0, x1=x1).squeeze()[()]
+            logrmax = brentq(func, x0, x1)
         except:
             logrmax = np.nan
         return 10**logrmax
