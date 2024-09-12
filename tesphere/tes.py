@@ -27,6 +27,8 @@ class TES:
         critical mass.
     """
     def __init__(self, pindex=0.5, rsonic=np.inf, compute_rcrit=True):
+        if pindex <= 0 or pindex >= 1:
+            raise UserWarning("Physically allowed range of p is 0 < p < 1")
         self._rfloor = 1e-5
         self._sigma = None
         self.pindex = pindex
