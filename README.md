@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13661169.svg)](https://doi.org/10.5281/zenodo.13661169)
+
 # tesphere - Turbulent Equilibrium Sphere
 
 `tesphere` is a python package that implements the turbulent equilibrium sphere (TES) model introduced in Moon & Ostriker (2024, in press).
