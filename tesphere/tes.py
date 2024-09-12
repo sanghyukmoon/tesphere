@@ -284,8 +284,10 @@ class TES:
             raise ValueError(f"sigma = {sigma_target:.2f} is too large."
                              " Cannot find the critical radius due to"
                              " the steep dependence of rcrit on rsonic")
-        rsonic = brentq(lambda x: get_sigma(pindex, x) - sigma_target, rs_min, 1e5)
+        rsonic = brentq(lambda x: get_sigma(pindex, x) - sigma_target,
+                        rs_min, 1e5)
         return rsonic
+
 
 class Logotrope:
     """Logotrope.
@@ -476,6 +478,7 @@ class Logotrope:
         amp = brentq(_func, 0.15, 1)
         return amp
 
+
 class TESe:
     """Turbulent equilibrium sphere of a fixed external pressure.
 
@@ -661,7 +664,6 @@ class TESe:
 
         chi = self.chi(x)
         dchi = 2*self.pindex*(chi - 1)
-        ddchi = 2*self.pindex*dchi
 
         a = chi
         b = chi + dchi
@@ -762,5 +764,6 @@ class TESe:
             raise ValueError(f"sigma = {sigma_target:.2f} is too large."
                              " Cannot find the critical radius due to"
                              " the steep dependence of rcrit on rsonic")
-        rsonic = brentq(lambda x: get_sigma(pindex, x) - sigma_target, rs_min, 1e5)
+        rsonic = brentq(lambda x: get_sigma(pindex, x) - sigma_target,
+                        rs_min, 1e5)
         return rsonic
