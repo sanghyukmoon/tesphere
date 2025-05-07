@@ -33,7 +33,7 @@ r = np.logspace(-1, 2)
 lines, labels = [], []
 linestyles = ['-', '--', '-.']
 for ls, rs in zip(linestyles, [np.infty, 7, 3]):
-    ts = tes.TES(rsonic = rs)
+    ts = tes.TES(rsonic=rs, pindex=0.5)
     ln, = plt.loglog(r, ts.density(r), c='k', ls=ls, lw=1.5)
     lines.append(ln)
     labels.append(r'$\xi_s = {}$'.format(rs))
