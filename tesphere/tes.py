@@ -314,12 +314,12 @@ class Logotrope:
         return np.exp(-u)
 
     def velocity_dispersion(self, r):
-        r = np.atleast_1d(r)
+        r = np.asarray(r)
         u, _ = self.solve(r)
-        res = np.zeros(len(r))
+        res = np.zeros_like(r, dtype=float)
         sig2 = (1 - self.amp*u)*np.exp(u) - 1
         np.sqrt(sig2, where=(sig2 >= 0), out=res)
-        return res
+        return res[()]
 
     def enclosed_mass(self, r):
         """
