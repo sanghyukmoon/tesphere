@@ -17,6 +17,34 @@ which then determine the following attributes.
 * `mcrit` : the dimensionless critical mass $m_\mathrm{crit}$
 * `ucrit` : the logarithmic center-to-edge density contrast $u_\mathrm{crit}$
 
+## Numerical integration
+
+`TES` integrates the logarithmic density contrast $u=\ln(\rho_c/\rho)$ and
+dimensionless enclosed mass $m$ together. **`TES.solve(r)` returns `(u, m)`;
+the second return value was previously the density-contrast derivative.**
+`TES.enclosed_mass(r)` returns the same mass directly.
+
+The keyword-only parameter `eps` (default `1e-5`, with `0 < eps < 1`) controls
+the central initialization:
+
+```python
+ts = tes.TES(pindex=0.5, rsonic=7, eps=1e-5)
+u, m = ts.solve(r)
+```
+
+For finite sonic radius, integration starts at
+$\xi_0=\min\{\epsilon,\xi_s\epsilon^{1/(2p)}\}$ with
+$u_0=(\xi_0/\xi_s)^{2p}$ and $m_0=\xi_0^3/3$.
+Below this radius, these approximations are evaluated at each queried radius,
+including $u(0)=m(0)=0$. In the thermal limit $\xi_s=\infty$, use
+$\xi_0=\epsilon$ and $u=\xi^2/6$. `solve` and `enclosed_mass` accept finite
+nonnegative radii. If no critical radius is found, the constructor sets
+`rcrit`, `ucrit` and `mcrit` to `np.inf` without solving at infinite radius.
+
+`eps` controls initialization smallness, independently of the ODE integration
+tolerances. Smaller values can be used to check initialization convergence.
+If the starting radius underflows to zero, construction raises `ValueError`.
+
 # Author
 
 Sanghyuk Moon (sanghyuk.moon at princeton dot edu)

@@ -12,6 +12,8 @@ class TES:
         power-law index of the velocity dispersion.
     rsonic : float, optional
         dimensionless sonic radius.
+    eps : float, optional
+        Smallness threshold for setting the starting radius; default is 1e-5.
 
     Attributes
     ----------
@@ -26,17 +28,27 @@ class TES:
     mcrit : float
         critical mass.
     """
-    def __init__(self, pindex=0.5, rsonic=np.inf, compute_rcrit=True):
+    def __init__(self, *, pindex=0.5, rsonic=np.inf, compute_rcrit=True,
+                 eps=1e-5):
         if pindex <= 0 or pindex >= 1:
             raise UserWarning("Physically allowed range of p is 0 < p < 1")
-        self._rfloor = 1e-5
         self._sigma = None
         self.pindex = pindex
         self.rsonic = rsonic
+        self.eps = eps
+        if np.isinf(rsonic):
+            self._rfloor = eps
+        else:
+            self._rfloor = min(eps, rsonic*eps**(1/(2*pindex)))
+        if self._rfloor == 0:
+            raise ValueError("Starting radius underflows to zero for the given "
+                             "pindex, rsonic and eps")
         if compute_rcrit:
             self.rcrit = self.critical_radius()
-            self.mcrit = self.enclosed_mass(self.rcrit)
-            self.ucrit, _ = self.solve(self.rcrit)
+            if np.isinf(self.rcrit):
+                self.ucrit = self.mcrit = np.inf
+            else:
+                self.ucrit, self.mcrit = self.solve(self.rcrit)
 
     def density(self, r):
         """Calculate normalized density.
@@ -61,29 +73,17 @@ class TES:
 
         Parameters
         ----------
-        r : float
-            Radius within which the enclosed mass is computed. If None, use
-            the maximum radius of a sphere.
+        r : float or array
+            Finite nonnegative dimensionless radii. Arrays must be in
+            increasing order.
 
         Returns
         -------
-        float
+        float or array
             Dimensionless enclosed mass.
         """
-        # If r is inf, mass is also inf.
-        if isinstance(r, float) and np.isinf(r):
-            return np.inf
-        else:
-            mask = np.isinf(r)
-        _, du = self.solve(r)
-        chi = self.chi(r)
-        dchi = 2*self.pindex*(chi - 1)/r
-        m = r**2*(chi*du - dchi)
-        if not isinstance(r, float):
-            m[mask] = np.inf
-
-        # return scala when the input is scala
-        return m.squeeze()[()]
+        _, m = self.solve(r)
+        return m
 
     def critical_radius(self):
         """Find critical TES radius
@@ -110,8 +110,7 @@ class TES:
     def bulk_modulus(self, xi):
         # Perturbation with the fixed turbulent velocity field
         # i.e., p = r_s = const.
-        u, du = self.solve(xi)
-        m = self.enclosed_mass(xi)
+        u, m = self.solve(xi)
         chi = self.chi(xi)
         dsu, dslogm = self._get_sonic_radius_derivatives(xi)
         dslogchi = -2*self.pindex*(1 - 1/chi)
@@ -162,94 +161,90 @@ class TES:
 
         Parameters
         ----------
-        r : array
-            Dimensionless radii
+        r : float or array
+            Finite nonnegative dimensionless radii. Arrays must be in
+            increasing order.
 
         Returns
         -------
-        u : array
-            Log density u = log(rho/rho_c)
-        du : array
-            Derivative of u: d(u)/d(r)
+        u : float or array
+            Logarithmic density contrast u = log(rho_c/rho).
+        m : float or array
+            Dimensionless enclosed mass, integrated with u.
+
+        Notes
+        -----
+        At radii below the starting point, evaluate the central approximations
+        u = (r/rsonic)**(2*pindex) and m = r**3/3 at the queried radii.
+        For rsonic = inf, use the thermal limiting case u = r**2/6.
         """
-        if isinstance(r, float) and np.isinf(r):
-            return np.inf, 0
+        r = np.atleast_1d(np.asarray(r, dtype='float64'))
+        u = np.empty(r.shape)
+        m = np.empty(r.shape)
+        small = r <= self._rfloor
+        if np.isinf(self.rsonic):
+            u[small] = r[small]**2/6
+            u0 = self._rfloor**2/6
         else:
-            mask = np.isinf(r)
+            u[small] = (r[small]/self.rsonic)**(2*self.pindex)
+            u0 = (self._rfloor/self.rsonic)**(2*self.pindex)
+        m[small] = r[small]**3/3
+        m0 = self._rfloor**3/3
+        integrate = ~small
+        if np.any(integrate):
+            radii = np.insert(r[integrate], 0, self._rfloor)
+            y0 = [u0, m0]
+            y = odeint(self._dydx, y0, np.log(radii),
+                       Dfun=self._jac, col_deriv=True, rtol=1e-10,
+                       atol=[1e-12, 1e-24], mxstep=5000)
+            u[integrate] = y[1:, 0]
+            m[integrate] = y[1:, 1]
 
-        r = np.array(r, dtype='float64')
-        y0 = np.array([0, 0])
-        if r.min() > self._rfloor:
-            r = np.insert(r, 0, self._rfloor)
-            istart = 1
-        else:
-            istart = 0
-        if np.all(r <= self._rfloor):
-            u = y0[0]*np.ones(r.size)
-            du = y0[1]*np.ones(r.size)
-        else:
-            y = odeint(self._dydx, y0, np.log(r),
-                       Dfun=self._jac, col_deriv=True)
-            u = y[istart:, 0]
-            du = y[istart:, 1]/r[istart:]
+        return u.squeeze()[()], m.squeeze()[()]
 
-        if not isinstance(r, float):
-            u[mask] = np.inf
-            du[mask] = 0
-
-        # return scala when the input is scala
-        return u.squeeze()[()], du.squeeze()[()]
-
-    def _dydx(self, y, t):
+    def _dydx(self, y, logr):
         """Differential equation for hydrostatic equilibrium.
 
         Parameters
         ----------
         y : array
-            Vector of dependent variables
-        x : array
-            Independent variable
+            Logarithmic density contrast u and enclosed mass m.
+        logr : float
+            Logarithmic radius ln(r).
 
         Returns
         -------
         array
-            Vector of (dy/dx)
+            Derivatives (du/dlogr, dm/dlogr).
         """
-        y1, y2 = y
-        dy1 = y2
-        x = np.exp(t)
+        u, m = y
+        r = np.exp(logr)
+        q = (r/self.rsonic)**(2*self.pindex)
+        chi = 1 + q
+        du = m/(r*chi) + 2*self.pindex*q/chi
+        dm = r**3*np.exp(-u)
+        return np.array([du, dm])
 
-        chi = self.chi(x)
-        dchi = 2*self.pindex*(chi - 1)
-        ddchi = 2*self.pindex*dchi
-
-        a = chi
-        b = chi + dchi
-        c = -dchi - ddchi - np.exp(2*t - y1)
-        dy2 = -(b/a)*y2 - (c/a)
-        return np.array([dy1, dy2])
-
-    def _jac(self, y, t):
-        y1, y2 = y
-        x = np.exp(t)
-        chi = self.chi(x)
-        dchi = 2*self.pindex*(chi - 1)
-        j11 = 0
-        j12 = 1
-        j21 = -(1./chi)*np.exp(2*t - y1)
-        j22 = -(1 + dchi/chi)
-        return [[j11, j21], [j12, j22]]
+    def _jac(self, y, logr):
+        u, _ = y
+        r = np.exp(logr)
+        chi = self.chi(r)
+        j12 = 1/(r*chi)
+        j21 = -r**3*np.exp(-u)
+        return [[0, j21], [j12, 0]]
 
     def _get_sonic_radius_derivatives(self, xi, dlog_xi_s=1e-3):
         log_xi_s = np.log(self.rsonic)
 
         rsonic = [np.exp(log_xi_s - dlog_xi_s), np.exp(log_xi_s + dlog_xi_s)]
-        tsc = [TES(pindex=self.pindex, rsonic=rsonic[0], compute_rcrit=False),
-               TES(pindex=self.pindex, rsonic=rsonic[1], compute_rcrit=False)]
-        u = [tsc[0].solve(xi)[0], tsc[1].solve(xi)[0]]
-        m = [tsc[0].enclosed_mass(xi), tsc[1].enclosed_mass(xi)]
-        du = (u[1] - u[0]) / (2*dlog_xi_s)
-        dlogm = (np.log(m[1]) - np.log(m[0])) / (2*dlog_xi_s)
+        tsc = [TES(pindex=self.pindex, rsonic=rsonic[0],
+                   compute_rcrit=False, eps=self.eps),
+               TES(pindex=self.pindex, rsonic=rsonic[1],
+                   compute_rcrit=False, eps=self.eps)]
+        u0, m0 = tsc[0].solve(xi)
+        u1, m1 = tsc[1].solve(xi)
+        du = (u1 - u0) / (2*dlog_xi_s)
+        dlogm = (np.log(m1) - np.log(m0)) / (2*dlog_xi_s)
 
         return du, dlogm
 
