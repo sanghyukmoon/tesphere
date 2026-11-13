@@ -268,7 +268,7 @@ class TES:
     @staticmethod
     def find_sonic_radius(pindex, sigma_target):
         if sigma_target == 0:
-            return np.infty
+            return np.inf
 
         def get_sigma(pindex, rsonic):
             ts = TES(pindex=pindex, rsonic=rsonic)
@@ -518,7 +518,7 @@ class TESe:
             try:
                 uc, rc, mc = tse.get_crit()
             except ValueError:
-                rc = np.infty
+                rc = np.inf
             return rc
 
         while (b - a > atol):
@@ -748,7 +748,7 @@ class TESe:
     @staticmethod
     def find_sonic_radius(pindex, sigma_target):
         if sigma_target == 0:
-            return np.infty
+            return np.inf
 
         def get_sigma(pindex, rsonic):
             ts = TESe(pindex=pindex, rsonic=rsonic)
